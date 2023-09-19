@@ -39,11 +39,6 @@ app.use(cors())
 app.use(morgan(':method :url :status :res[content-length] - :response-time ms :body'))
 
 
-app.get('/', (req, res) => {
-
-    res.send('<h1>Hola Mundo</h1>')
-})
-
 app.get('/info', (req, res)=> {
 
     const date = new Date()
