@@ -3,6 +3,8 @@ const express = require('express')
 const morgan = require('morgan')
 const cors = require('cors')
 const Phonebook = require('./models/phonebook')
+const errorHandler = require('./Middlewares/errorHandler')
+const unknownEndpoint = require('./Middlewares/unknownEndpoint')
 
 const app = express()
 
@@ -64,7 +66,7 @@ app.get('/api/persons', (req, res) => {
     
 })
 
-app.get('/api/persons/:id', (req, res) => {
+app.get('/api/persons/:id', (req, res, next) => {
     const id = req.params.id
 
     Phonebook.findById(id)
@@ -74,11 +76,12 @@ app.get('/api/persons/:id', (req, res) => {
         }
 
         res.status(404).end()
-    })  
+    })
+    .catch(error => next(error))  
     
 })
 
-app.delete('/api/persons/:id', (req, res) => {
+app.delete('/api/persons/:id', (req, res, next) => {
     const id = req.params.id
 
     Phonebook.findByIdAndRemove(id)
@@ -90,40 +93,64 @@ app.delete('/api/persons/:id', (req, res) => {
                 res.status(404).json({message: 'id not found'}).end()
             }
         })
+        .catch(error => next(error))
 
     
 })
 
-app.post('/api/persons', (req, res) => {
+app.post('/api/persons', (req, res, next) => {
 
     const {name, number} = req.body
 
-    if (!name || !number) {
-        res.status(400).json({error: 'name or number are missing'})
-        return
+    // if (!name || !number) {
+    //     res.status(400).json({error: 'name or number are missing'})
+    //     return
+    // }
+
+    // Phonebook.findOne({name: name}).then(result => {
+
+    //     if (result) {
+    //         res.status(400).json({error: "name must be unique"})
+    //         return
+    //     }
+
+        
+    // })
+
+    const newPerson = {
+        name,
+        number
     }
 
-    Phonebook.findOne({name: name}).then(result => {
-
-        if (result) {
-            res.status(400).json({error: "name must be unique"})
-            return
-        }
-
-        const newPerson = {
-            name,
-            number
-        }
-    
-        Phonebook.create(newPerson).then(result => {
-            res.status(200).json(result)
-        })
+    Phonebook.create(newPerson).then(result => {
+        res.status(200).json(result)
     })
-
-    
+    .catch(error => next(error))
 
 
 })
+
+app.put('/api/persons/:id', (req, res, next) => {
+    const id = req.params.id
+    const {name, number} = req.body
+
+    const person = {
+        name,
+        number
+    }
+
+    const opts = {runValidators: true}
+
+    Phonebook.findByIdAndUpdate(id, person, {runValidators: true, new: true})
+        .then(updatedPerson => {
+            res.json(updatedPerson)
+        })
+        .catch(error => next(error))
+})
+
+app.use(unknownEndpoint)
+
+app.use(errorHandler)
 
 
 app.listen(PORT, ()  => {
